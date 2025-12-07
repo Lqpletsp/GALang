@@ -158,7 +158,7 @@ class Interpreter():
 
 Code = '''
 out "";|This is a comment|
-out "Hello world", " Hello avinav";'''
+out "Hello world", " Hello ";'''
 
 Interpreter().Interpret(Code)
 # NOTE: NOT COMPLETED...
