@@ -1,12 +1,14 @@
 class Keyword: 
     def __init__(self) -> None:
-        self.__Keywords:list = ["out","in","inc","dec"]
+        self.__Keywords:list = ["out","in","inc","dec", "decl","varchar","ch","int","bool"]
         self.__OneVariableCommand:list = ["in"]
-        self.__TwoOrMoreVariableCommand:list = ["out","inc","dec"]
+        self.__TwoOrMoreVariableCommand:list = ["out","inc","dec","decl"]
+        self.__Datatypes:list = ["varchar","ch","int","bool"]
 
     def GetKeywords(self) -> list:return self.__Keywords
     def GetOneVariableCommand(self) -> list: return self.__OneVariableCommand
     def GetTwoOrMoreVariableCommand(self) -> list: return self.__TwoOrMoreVariableCommand
+    def GetDataTypes(self) -> list: return self.__Datatypes
 
 class Error: 
     def OutError(self, ErrorType, ErrorLine) -> None:
@@ -84,10 +86,11 @@ class Interpreter():
     def out(self,outtoken):
         for iter1 in range(len(outtoken)):
             outputval = ""
-            if outtoken[iter1][0] == '"' and outtoken[iter1][-1] == '"':print(outtoken[iter1].strip('"'),end="")
+            if outtoken[iter1].isdigit():print(outtoken[iter1])
+            elif outtoken[iter1][0] == '"' and outtoken[iter1][-1] == '"':print(outtoken[iter1].strip('"'),end="")
             elif outtoken[iter1][0] != '"' and outtoken[iter1][-1] != '"':
                 for each in self.__memory:
-                    if each[0]==outtoken[iter1]: outputval = each[1]
+                    if each[1]==outtoken[iter1]: outputval = each[2]
                 if outputval:print(outputval)
                 else: return -1,f"Undeclared variable, {outtoken[iter1]}"
             elif outtoken[iter1][0] == '"' and outtoken[iter1][-1]!= '"' or (outtoken[iter1][0] != '"' and outtoken[iter1] == '"'):
@@ -96,16 +99,38 @@ class Interpreter():
         return 1,""
 
     def inp(self,inpvariable,storeddata):
-        self.implementmemory([inpvariable.strip('"'),storeddata])
-        return None, None
+        for each in self.__memory: 
+            if each[1] == inpvariable and self.determinedatatype(storeddata) == each[0]:
+                self.implementmemory([each[0],each[1],storeddata])
+                break
+                return True, ""
+            elif each[1] == inpvariable and self.determinedatatype(storedata) != each[0]:
+                break
+                return False, "Invalid datatype for the inputting value"
+        return False, "Varaible not foun d"
 
-    def inc(self,tokens):pass 
+    def inc(self,tokens):pass
     def dec(self,tokens):pass
-    
+
+    def decl(self,tokens):
+        if not tokens[0].isdigit() and tokens[1] in Keyword().GetDataTypes():
+            self.implementmemory([tokens[1],tokens[0]])
+            return True, "" 
+        elif tokens[0].isdigit(): return False, "Invalid variable name"
+        elif tokens[1] not in Keyword().GetDataTypes(): return False, "Invalid Datatype"
+
+    def determinedatatype(self,value) -> str:
+        if value[0] == '"' and value[-1] == '"' and len(value)>1: return "varchar"
+        elif value[0] == '"' and value[-1] == '"' and len(value) <= 1: return "ch"
+        elif value[0].isdigit and int(value[0]) == float(value[0]): return "int"
+        elif value[0].isdigit and int(value[0]) != float(value[0]): return "float"
+        else: return ""
+
     def Interpret(self, code):
         lines,tokenizedcode = code.split("\n"),[]
         for iter1 in range(len(lines)):
             tokenizedline = Tokenizer().Tokenize(lines[iter1],iter1)
+
             if tokenizedline: 
                 if tokenizedline[-1] != ";":
                     Error().OutError("Malformed line. Each line must end with ';'", iter1)
@@ -122,7 +147,13 @@ class Interpreter():
                 elif tokenizedline[0] == "in":
                     sudostore = input("")
                     returnval, returnstate = self.inp(tokenizedline[1],sudostore)
-                elif tokenizedline[0] == "inc":
+                elif tokenizedline[0] == "inc": pass #Ignore for now... first code a way to assign values and declare variables. 
+                elif tokenizedline[0] == "decl":
+                    returnval, returnstate = self.decl(tokenizedline[1:])
+                    if not returnval: self.Error().OutError(returnstate, iter1)
+
+
+
 
 
 Code = '''
