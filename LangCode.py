@@ -73,12 +73,11 @@ class Tokenizer:
         return Storetokens
 
 class Interpreter():
-    def __init__(self) -> None: 
-        self.__memory = []
-        invalidvariablecharacters = [""]
+    def __init__(self) -> None: self.__memory = []
 
-    def implementmemory(self,val) -> None:
-        try:self.__memory.append(val)
+    def storevariables(self,val) -> None:
+        try:
+            self.__memory.append(val)
         except MemoryError:
             print("Memory full, write unsucessful")
             exit()
@@ -90,7 +89,9 @@ class Interpreter():
             elif outtoken[iter1][0] == '"' and outtoken[iter1][-1] == '"':print(outtoken[iter1].strip('"'),end="")
             elif outtoken[iter1][0] != '"' and outtoken[iter1][-1] != '"':
                 for each in self.__memory:
-                    if each[1]==outtoken[iter1]: outputval = each[2]
+                    if each[1]==outtoken[iter1]:
+                        #print(each)
+                        outputval = each[2]
                 if outputval:print(outputval)
                 else: return -1,f"Undeclared variable, {outtoken[iter1]}"
             elif outtoken[iter1][0] == '"' and outtoken[iter1][-1]!= '"' or (outtoken[iter1][0] != '"' and outtoken[iter1] == '"'):
@@ -98,32 +99,36 @@ class Interpreter():
         print()
         return 1,""
 
-    def inp(self,inpvariable,storeddata):
-        for each in self.__memory: 
-            if each[1] == inpvariable and self.determinedatatype(storeddata) == each[0]:
-                self.implementmemory([each[0],each[1],storeddata])
-                break
+    def inp(self,inpvariable,storedata): #inp because it is a keyword in python... but this is for the in function 
+        for iter1 in range(len(self.__memory)): 
+            if self.__memory[iter1][1] == inpvariable and self.determinedatatype(storedata) == self.__memory[iter1][0]:
+                #print(self.__memory[iter1])
+                self.__memory[iter1].append(storedata)
                 return True, ""
-            elif each[1] == inpvariable and self.determinedatatype(storedata) != each[0]:
-                break
+            elif self.__memory[iter1][1] == inpvariable and self.determinedatatype(storedata) != self.__memory[iter1][0]:
+                #print([inpvariable,storedata, self.determinedatatype(storedata)])
                 return False, "Invalid datatype for the inputting value"
-        return False, "Varaible not foun d"
+        return False, "Varaible not found"
 
     def inc(self,tokens):pass
     def dec(self,tokens):pass
 
     def decl(self,tokens):
-        if not tokens[0].isdigit() and tokens[1] in Keyword().GetDataTypes():
-            self.implementmemory([tokens[1],tokens[0]])
+        if not tokens[0].isdigit() and tokens[1].strip('"') in Keyword().GetDataTypes():
+            self.storevariables([tokens[1],tokens[0]])
+            #print([tokens[1],tokens[0]])
             return True, "" 
         elif tokens[0].isdigit(): return False, "Invalid variable name"
-        elif tokens[1] not in Keyword().GetDataTypes(): return False, "Invalid Datatype"
+        elif tokens[1] not in Keyword().GetDataTypes(): 
+            #print(self.__memory)
+            #print(tokens[1])
+            return False, "Invalid Datatype"
 
     def determinedatatype(self,value) -> str:
-        if value[0] == '"' and value[-1] == '"' and len(value)>1: return "varchar"
-        elif value[0] == '"' and value[-1] == '"' and len(value) <= 1: return "ch"
-        elif value[0].isdigit and int(value[0]) == float(value[0]): return "int"
-        elif value[0].isdigit and int(value[0]) != float(value[0]): return "float"
+        if not value[0].isdigit() and len(value)>1: return "varchar"
+        elif not value[0].isdigit() and len(value) <= 1: return "ch"
+        elif value[0].isdigit() and int(value[0]) == float(value[0]): return "int"
+        elif value[0].isdigit() and int(value[0]) != float(value[0]): return "float"
         else: return ""
 
     def Interpret(self, code):
@@ -147,18 +152,17 @@ class Interpreter():
                 elif tokenizedline[0] == "in":
                     sudostore = input("")
                     returnval, returnstate = self.inp(tokenizedline[1],sudostore)
+                    if not returnval:
+                        #print(self.__memory)
+                        Error().OutError(returnstate,iter1)
                 elif tokenizedline[0] == "inc": pass #Ignore for now... first code a way to assign values and declare variables. 
                 elif tokenizedline[0] == "decl":
                     returnval, returnstate = self.decl(tokenizedline[1:])
-                    if not returnval: self.Error().OutError(returnstate, iter1)
-
-
-
-
+                    if not returnval: Error().OutError(returnstate, iter1)
 
 Code = '''
-out "";|This is a comment|
-out "Hello world", " Hello ";'''
-
+decl variable1 varchar;
+out "input your name";
+in variable1;
+out "You inputted: ", variable1;'''
 Interpreter().Interpret(Code)
-# NOTE: NOT COMPLETED...
