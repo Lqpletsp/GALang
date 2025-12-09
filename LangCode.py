@@ -77,8 +77,7 @@ class Interpreter():
     def __init__(self) -> None: self.__memory = []
 
     def storevariables(self,val) -> None:
-        try:
-            self.__memory.append(val)
+        try:self.__memory.append(val)
         except MemoryError:
             print("Memory full, write unsucessful")
             exit()
@@ -96,7 +95,7 @@ class Interpreter():
             elif outtoken[iter1][0] != '"' and outtoken[iter1][-1] != '"':
                 for each in self.__memory:
                     if each[1]==outtoken[iter1]:outputval = each[2]
-                if outputval:print(outputval.strip('"'), end="")
+                if outputval:print(str(outputval).strip('"'), end="")
                 else: return -1,f"Undeclared variable, {outtoken[iter1]}"
             elif outtoken[iter1][0] == '"' and outtoken[iter1][-1]!= '"' or (outtoken[iter1][0] != '"' and outtoken[iter1] == '"'):
                 return -1, "Incorrect representation of string"
@@ -114,7 +113,6 @@ class Interpreter():
     def set(self,inpvariable,storedata): 
         for iter1 in range(len(self.__memory)): 
             if self.__memory[iter1][1] == inpvariable and self.determinedatatype(storedata) == self.__memory[iter1][0]:
-                print(self.determinedatatype(storedata))
                 try:self.__memory[iter1][2] = storedata
                 except: self.__memory[iter1].append(storedata)
                 return True, ""
@@ -128,8 +126,34 @@ class Interpreter():
                 elif variablestore[0] != self.__memory[iter1][0]: return False, "Incorrect datatype. Cannot store in the said variable"
         return False, "Varaible not found"
 
-    def inc(self,tokens):pass
-    def dec(self,tokens):pass
+    def inc(self,tokens):
+        for iter1 in range(len(tokens)): 
+            if not self.determinedatatype(tokens[iter1]):
+                variabledata = self.searchvariables(tokens[iter1])
+                if not variabledata: return False, "Variable not found"
+                if variabledata[0] != 'int' and variabledata[0] != 'float':return False, "Invalid datatype for 'inc' command"
+                for iter2 in range(len(self.__memory)):
+                    if self.__memory[iter2][1] == tokens[iter1]: 
+                        try: self.__memory[iter2][2] = int(self.__memory[iter2][2]) + 1 
+                        except: self.__memory[iter2].append(1)
+                        return True, ""
+                return False, "Variable not found"
+            return False, "Cannot increment non-variable tokens"
+
+                    
+    def dec(self,tokens):
+        for iter1 in range(len(tokens)): 
+            if not self.determinedatatype(tokens[iter1]):
+                variabledata = self.searchvariables(tokens[iter1])
+                if not variabledata: return False, "Variable not found"
+                if variabledata[0] != 'int' and variabledata[0] != 'float':return False, "Invalid datatype for 'inc' command"
+                for iter2 in range(len(self.__memory)):
+                    if self.__memory[iter2][1] == tokens[iter1]: 
+                        try: self.__memory[iter2][2] = int(self.__memory[iter2][2]) - 1 
+                        except: self.__memory[iter2].append(-1)
+                        return True, ""
+                return False, "Variable not found"
+            return False, "Cannot increment non-variable tokens"
 
     def decl(self,tokens):
         if not tokens[0].isdigit() and tokens[1].strip('"') in Keyword().GetDataTypes():
@@ -139,7 +163,7 @@ class Interpreter():
         elif tokens[1] not in Keyword().GetDataTypes(): 
             return False, "Invalid Datatype"
 
-    def determinedatatype(self,value) -> str: #Right now this function is quite useless
+    def determinedatatype(self,value) -> str: 
         if (value[0] == '"' and value[-1] =='"'): return "varchar"
         elif value.isdigit() and int(value) == float(value): return "int"
         elif value.isdigit() and int(value) != float(value): return "float"
@@ -162,30 +186,40 @@ class Interpreter():
                 elif tokenizedline[0] in Keyword().GetTwoOrMoreVariableCommand() and len(tokenizedline)<2:
                     Error().OutError("Length of line does not support two or more tokens command", iter1)
 
-                if tokenizedline[0] == "out":
-                    returnval, returnstate = self.out(tokenizedline[1:]) #Put variable name and data
-                    if returnval == -1 and returnstate:Error().OutError(returnstate, iter1) #If malformed line for out Keyword
-                elif tokenizedline[0] == "in":
+                if tokenizedline[0] == "out": #prints/outputs
+                    returnval, returnstate = self.out(tokenizedline[1:]) 
+                    if returnval == -1 and returnstate:Error().OutError(returnstate, iter1) 
+                
+                elif tokenizedline[0] == "in": #Allow input
                     sudostore = input("")
                     returnval, returnstate = self.inp(tokenizedline[1],sudostore)
                     if not returnval:
                         Error().OutError(returnstate,iter1)
-                elif tokenizedline[0] == "inc": pass #Ignore for now... first code a way to assign values and declare variables. 
-                elif tokenizedline[0] == "decl":
+
+                elif tokenizedline[0] == "inc": #Increments float or int datatype variables by 1 
+                    returnval,returnstate = self.inc(tokenizedline[1:])
+                    if not returnval: Error().OutError(returnstate,iter1)
+
+                elif tokenizedline[0] == "dec": #Decrements float or int datattype variables by 1 
+                    returnval,returnstate = self.dec(tokenizedline[1:])
+                    if not returnval: Error().OutError(returnstate, iter1)
+            
+                elif tokenizedline[0] == "decl": #Declares variables with their datatype
                     returnval, returnstate = self.decl(tokenizedline[1:])
                     if not returnval: Error().OutError(returnstate, iter1)
-                elif tokenizedline[0] == "set": 
+
+                elif tokenizedline[0] == "set": #Assign a value to a variable
                     if len(tokenizedcode)>3: Error.OutError("Malformed line for 'set'", iter1)
                     returnval, returnstate = self.set(tokenizedline[1],tokenizedline[2])
                     if not returnval: Error().OutError(returnstate, iter1)
 
 Code = '''
-decl variable1 varchar;
-decl variable2 varchar;
-decl variable3 int; 
-set variable1 "Hello";
-out variable1;
-set variable2 variable1;
-out variable2; 
+decl variable1 int;
+decl variable2 int; 
+set variable1 9000;
+set variable2 8000;
+dec variable1;
+dec variable2;
+out variable1, variable2;
 '''
 Interpreter().Interpret(Code)
