@@ -1,9 +1,10 @@
 class Keyword: 
     def __init__(self) -> None:
         self.__Keywords:list = ["out","in","inc","dec", "decl","varchar","int","bool"
-                                ,"set","empt"]
+                                ,"set","empt", "add"]
         self.__OneVariableCommand:list = ["in", "empt"]
-        self.__TwoOrMoreVariableCommand:list = ["out","inc","dec","decl","set"]
+        self.__TwoOrMoreVariableCommand:list = ["out","inc","dec","decl","set", "add",
+                                                "minus","div", "mult"]
         self.__Datatypes:list = ["varchar","int","bool"]
 
     def GetKeywords(self) -> list:return self.__Keywords
@@ -61,6 +62,7 @@ class Tokenizer:
                 if token != "":
                     Storetokens.append(token)
                     token = ""
+
                 count += 1 
                 continue
             if ch == ";":
@@ -111,11 +113,14 @@ class Interpreter():
         return False, "Varaible not found"
 
     def set(self,inpvariable,storedata): 
-        for iter1 in range(len(self.__memory)): 
-            if self.__memory[iter1][1] == inpvariable and self.determinedatatype(storedata) == self.__memory[iter1][0]:
+        for iter1 in range(len(self.__memory)):
+            if (self.__memory[iter1][1] == inpvariable and ((self.determinedatatype(storedata) == self.__memory[iter1][0] or 
+                                                            (self.determinedatatype(storedata) == "int" or self.determinedatatype(storedata) == "float")) and
+                                                            (self.__memory[iter1][0] == "float" or self.__memory[iter1][0] == "int"))):
                 try:self.__memory[iter1][2] = storedata
                 except: self.__memory[iter1].append(storedata)
                 return True, ""
+
             elif self.__memory[iter1][1] == inpvariable and not self.determinedatatype(storedata):
                 variablestore = self.searchvariables(storedata)
                 if not variablestore: return False, "Variable not found"
@@ -124,13 +129,14 @@ class Interpreter():
                     except:self.__memory[iter1].append(variablestore[2])
                     return True, ""
                 elif variablestore[0] != self.__memory[iter1][0]: return False, "Incorrect datatype. Cannot store in the said variable"
+
         return False, "Varaible not found"
 
     def empt(self):print("\033[2J\033[H")
 
     def inc(self,tokens):
         for iter1 in range(len(tokens)): 
-            state1 = False
+            state2 = False
             if not self.determinedatatype(tokens[iter1]):
                 variabledata = self.searchvariables(tokens[iter1])
                 if not variabledata: return False, "Variable not found"
@@ -173,6 +179,31 @@ class Interpreter():
         elif value.isdigit() and int(value) != float(value): return "float"
         else: return ""
 
+    def add(self, tokens):
+        storeall = []
+        for iter1 in range(len(tokens)-1):
+            datatypeoftoken = self.determinedatatype(tokens[iter1])
+            if not datatypeoftoken:
+                variable = self.searchvariables(tokens[iter1])
+                try:
+                    if (variable and (variable[0] == "int" or variable[0] == "float")):
+                        storeall.append(float(variable[2]))
+                    elif not variable:return False, f"Variable not declared for '{tokens[iter1]}'"
+                    elif variable[0] != "int" and variable[0] != "float":
+                        return False, f"Only int/float variables can be added"
+                except:
+                    return False, f"Adding variables must have value in them. No int/float data stored in '{tokens[iter1]}'"
+
+            elif datatypeoftoken == "int" or datatypeoftoken == "float":storeall.append(float(dataofstoringvariable[2]))
+            elif datatypeoftoken != "int" and datatypeoftoken != "float":return False, "Only int/float tokens can be added. Neither found."
+
+        dataofstoringvariable = self.searchvariables(tokens[-1])
+        if dataofstoringvariable and (dataofstoringvariable[0] == "float" or dataofstoringvariable[0] == "int"):
+            returnstate, returnval = self.set(tokens[-1],str(sum(storeall)))
+            return returnstate, returnval
+        elif not dataofstoringvariable: 
+            return False, f"Variable not found, '{tokens[-1]}'"
+            
     def Interpret(self, code) -> None:
         lines,tokenizedcode = code.split("\n"),[]
         for iter1 in range(len(lines)):
@@ -220,15 +251,16 @@ class Interpreter():
                     returnval, returnstate = self.set(tokenizedline[1],tokenizedline[2])
                     if not returnval: Error().OutError(returnstate, iter1)
 
+                elif tokenizedline[0] == "add":
+                    returnval, returnstate = self.add(tokenizedline[1:])
+                    if not returnval: Error().OutError(returnstate, iter1)
+
 Code = '''
-decl variable1 int;
-decl variable2 int; 
-set variable1 9000;
-set variable2 8000;
-inc variable1,variable2;
-out variable1," ",variable2;
-empt;
-dec variable1, variable2; 
-out variable1, " ", variable2;
+decl variable1 int; 
+decl variable2 int;
+decl variable3 int;
+set variable1 200; 
+set variable2 300;
+add variable1,variable2,variable3;
 ''' 
 Interpreter().Interpret(Code)
