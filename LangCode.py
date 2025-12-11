@@ -1,7 +1,7 @@
 class Keyword: 
     def __init__(self) -> None:
         self.__Keywords:list = ["out","in","inc","dec", "decl","varchar","int","bool"
-                                ,"set","empt", "add"]
+                                ,"set","empt", "add", "minus","mult"]
         self.__OneVariableCommand:list = ["in", "empt"]
         self.__TwoOrMoreVariableCommand:list = ["out","inc","dec","decl","set", "add",
                                                 "minus","div", "mult"]
@@ -206,7 +206,69 @@ class Interpreter():
             return returnstate, returnval
         elif not dataofstoringvariable: 
             return False, f"Variable not found, '{tokens[-1]}'"
-            
+
+    def minus(self, tokens):
+        storeall = []
+        for iter1 in range(len(tokens)-1):
+            datatypeoftoken = self.determinedatatype(tokens[iter1])
+            if not datatypeoftoken:
+                variable = self.searchvariables(tokens[iter1])
+                try:
+                    if (variable and (variable[0] == "int" or variable[0] == "float")):
+                        storeall.append(float(variable[2]))
+                    elif not variable:return False, f"Variable not declared for '{tokens[iter1]}'"
+                    elif variable[0] != "int" and variable[0] != "float":
+                        return False, f"Only int/float variables can be subtracted"
+                except:
+                    return False, f"Subtracting variables must have value in them. No int/float data stored in '{tokens[iter1]}'"
+
+            elif datatypeoftoken == "int" or datatypeoftoken == "float":storeall.append(float(tokens[iter1]))
+            elif datatypeoftoken != "int" and datatypeoftoken != "float":return False, "Only int/float tokens can be subtracted. Neither found."
+
+        dataofstoringvariable = self.searchvariables(tokens[-1])
+        subtractedvalue = float(storeall[0])
+        for iter1 in range(1,len(storeall)): subtractedvalue -= float(storeall[iter1]) 
+        if dataofstoringvariable and (dataofstoringvariable[0] == "float" or dataofstoringvariable[0] == "int"):
+            returnstate, returnval = self.set(tokens[-1],str(subtractedvalue))
+            return returnstate, returnval
+
+        elif not dataofstoringvariable: 
+            return False, f"Variable not found, '{tokens[-1]}'"
+        elif dataofstoringvariable and (dataofstoringvariable[0] != 'float' and dataofstoringvariable[0] != 'int'):
+            return False, f"Invalid datatype for storing variable, '{tokens[-1]}'"
+
+    def mult(self, tokens):
+        storeall = []
+        for iter1 in range(len(tokens)-1):
+            datatypeoftoken = self.determinedatatype(tokens[iter1])
+            if not datatypeoftoken:
+                variable = self.searchvariables(tokens[iter1])
+                try:
+                    if (variable and (variable[0] == "int" or variable[0] == "float")):
+                        storeall.append(float(variable[2]))
+                    elif not variable:return False, f"Variable not declared for '{tokens[iter1]}'"
+                    elif variable[0] != "int" and variable[0] != "float":
+                        return False, f"Only int/float variables can be subtracted"
+                except:
+                    return False, f"Multiplying variables must have value in them. No int/float data stored in '{tokens[iter1]}'"
+
+            elif datatypeoftoken == "int" or datatypeoftoken == "float":storeall.append(float(tokens[iter1]))
+            elif datatypeoftoken != "int" and datatypeoftoken != "float":return False, "Only int/float tokens can be subtracted. Neither found."
+
+        dataofstoringvariable = self.searchvariables(tokens[-1])
+        multiplyingvalue = 1
+        for iter1 in range(len(storeall)): multiplyingvalue *= float(storeall[iter1])
+
+        if dataofstoringvariable and (dataofstoringvariable[0] == "float" or dataofstoringvariable[0] == "int"):
+            returnstate, returnval = self.set(tokens[-1],str(multiplyingvalue))
+            return returnstate, returnval
+
+        elif not dataofstoringvariable: 
+            return False, f"Variable not found, '{tokens[-1]}'"
+
+        elif dataofstoringvariable and (dataofstoringvariable[0] != 'float' and dataofstoringvariable[0] != 'int'):
+            return False, f"Invalid datatype for storing variable, '{tokens[-1]}'"
+
     def Interpret(self, code) -> None:
         lines,tokenizedcode = code.split("\n"),[]
         for iter1 in range(len(lines)):
@@ -258,6 +320,13 @@ class Interpreter():
                     returnval, returnstate = self.add(tokenizedline[1:])
                     if not returnval: Error().OutError(returnstate, iter1)
 
+                elif tokenizedline[0] == "minus":
+                    returnval, returnstate = self.minus(tokenizedline[1:])
+                    if not returnval: Error().OutError(returnstate, iter1)
+                elif tokenizedline[0] == "mult":
+                    returnval, returnstate = self.mult(tokenizedline[1:])
+                    if not returnval: Error().OutError(returnstate, iter1)
+
 Code = '''
 decl variable1 int; 
 decl variable2 int;
@@ -266,5 +335,9 @@ set variable1 200;
 set variable2 300;
 add variable1,variable2,variable3;
 out variable3;
+minus variable1, variable2, variable3;
+out variable3;
+mult variable1, variable2, variable3; 
+out variable3; 
 ''' 
 Interpreter().Interpret(Code)
