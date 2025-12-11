@@ -96,7 +96,10 @@ class Interpreter():
             elif outtoken[iter1][0] == '"' and outtoken[iter1][-1] == '"':print(outtoken[iter1].strip('"'),end="")
             elif outtoken[iter1][0] != '"' and outtoken[iter1][-1] != '"':
                 for each in self.__memory:
-                    if each[1]==outtoken[iter1]:outputval = each[2]
+                    if each[1]==outtoken[iter1]:
+                        if each[0] == "float":outputval = float(each[2].strip())
+                        elif each[0] == "int":outputval = int(float(each[2].strip()))
+                        elif each[0] == "str":outputval = str(each[2])
                 if outputval:print(str(outputval).strip('"'), end="")
                 else: return -1,f"Undeclared variable, {outtoken[iter1]}"
             elif outtoken[iter1][0] == '"' and outtoken[iter1][-1]!= '"' or (outtoken[iter1][0] != '"' and outtoken[iter1] == '"'):
@@ -115,7 +118,7 @@ class Interpreter():
     def set(self,inpvariable,storedata): 
         for iter1 in range(len(self.__memory)):
             if (self.__memory[iter1][1] == inpvariable and ((self.determinedatatype(storedata) == self.__memory[iter1][0] or 
-                                                            (self.determinedatatype(storedata) == "int" or self.determinedatatype(storedata) == "float")) and
+                                                            (self.determinedatatype(storedata) == "int" or self.determinedatatype(storedata) == "float")) or
                                                             (self.__memory[iter1][0] == "float" or self.__memory[iter1][0] == "int"))):
                 try:self.__memory[iter1][2] = storedata
                 except: self.__memory[iter1].append(storedata)
@@ -262,5 +265,6 @@ decl variable3 int;
 set variable1 200; 
 set variable2 300;
 add variable1,variable2,variable3;
+out variable3;
 ''' 
 Interpreter().Interpret(Code)
