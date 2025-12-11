@@ -1,7 +1,7 @@
 class Keyword: 
     def __init__(self) -> None:
         self.__Keywords:list = ["out","in","inc","dec", "decl","varchar","int","bool"
-                                ,"set","empt", "add", "minus","mult"]
+                                ,"set","empt", "add", "minus","mult", "div"]
         self.__OneVariableCommand:list = ["in", "empt"]
         self.__TwoOrMoreVariableCommand:list = ["out","inc","dec","decl","set", "add",
                                                 "minus","div", "mult"]
@@ -91,7 +91,7 @@ class Interpreter():
 
     def out(self,outtoken):
         for iter1 in range(len(outtoken)):
-            outputval = ""
+            outputval = "no"
             if outtoken[iter1].isdigit():print(outtoken[iter1])
             elif outtoken[iter1][0] == '"' and outtoken[iter1][-1] == '"':print(outtoken[iter1].strip('"'),end="")
             elif outtoken[iter1][0] != '"' and outtoken[iter1][-1] != '"':
@@ -100,8 +100,9 @@ class Interpreter():
                         if each[0] == "float":outputval = float(each[2].strip())
                         elif each[0] == "int":outputval = int(float(each[2].strip()))
                         elif each[0] == "str":outputval = str(each[2])
-                if outputval:print(str(outputval).strip('"'), end="")
-                else: return -1,f"Undeclared variable, {outtoken[iter1]}"
+                if outputval != "no":print(str(outputval).strip('"'), end="")
+                else:
+                    return -1,f"Undeclared variable, {outtoken[iter1]}"
             elif outtoken[iter1][0] == '"' and outtoken[iter1][-1]!= '"' or (outtoken[iter1][0] != '"' and outtoken[iter1] == '"'):
                 return -1, "Incorrect representation of string"
         print()
@@ -269,6 +270,40 @@ class Interpreter():
         elif dataofstoringvariable and (dataofstoringvariable[0] != 'float' and dataofstoringvariable[0] != 'int'):
             return False, f"Invalid datatype for storing variable, '{tokens[-1]}'"
 
+    def div(self, tokens):
+        storeall = []
+        for iter1 in range(len(tokens)-1):
+            datatypeoftoken = self.determinedatatype(tokens[iter1])
+            if not datatypeoftoken:
+                variable = self.searchvariables(tokens[iter1])
+                try:
+                    if (variable and (variable[0] == "int" or variable[0] == "float")):
+                        storeall.append(float(variable[2]))
+                    elif not variable:return False, f"Variable not declared for '{tokens[iter1]}'"
+                    elif variable[0] != "int" and variable[0] != "float":
+                        return False, f"Only int/float variables can be subtracted"
+                except:
+                    return False, f"Multiplying variables must have value in them. No int/float data stored in '{tokens[iter1]}'"
+
+            elif datatypeoftoken == "int" or datatypeoftoken == "float":storeall.append(float(tokens[iter1]))
+            elif datatypeoftoken != "int" and datatypeoftoken != "float":return False, "Only int/float tokens can be subtracted. Neither found."
+
+        dataofstoringvariable = self.searchvariables(tokens[-1])
+        dividingvalue = float(storeall[0])
+        for iter1 in range(1,len(storeall)):
+            if storeall[iter1] == 0: return False, "Cannot divide by zero"
+            dividingvalue /= float(storeall[iter1])
+
+        if dataofstoringvariable and (dataofstoringvariable[0] == "float" or dataofstoringvariable[0] == "int"):
+            returnstate, returnval = self.set(tokens[-1],str(dividingvalue))
+            return returnstate, returnval
+
+        elif not dataofstoringvariable: 
+            return False, f"Variable not found, '{tokens[-1]}'"
+
+        elif dataofstoringvariable and (dataofstoringvariable[0] != 'float' and dataofstoringvariable[0] != 'int'):
+            return False, f"Invalid datatype for storing variable, '{tokens[-1]}'"
+
     def Interpret(self, code) -> None:
         lines,tokenizedcode = code.split("\n"),[]
         for iter1 in range(len(lines)):
@@ -326,6 +361,9 @@ class Interpreter():
                 elif tokenizedline[0] == "mult":
                     returnval, returnstate = self.mult(tokenizedline[1:])
                     if not returnval: Error().OutError(returnstate, iter1)
+                elif tokenizedline[0] == "div":
+                    returnval, returnstate = self.div(tokenizedline[1:])
+                    if not returnval: Error().OutError(returnstate, iter1)
 
 Code = '''
 decl variable1 int; 
@@ -338,6 +376,8 @@ out variable3;
 minus variable1, variable2, variable3;
 out variable3;
 mult variable1, variable2, variable3; 
-out variable3; 
+out variable3;
+div variable1, variable2, variable3; 
+out variable3;
 ''' 
 Interpreter().Interpret(Code)
