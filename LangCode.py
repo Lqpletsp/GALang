@@ -398,5 +398,5 @@ out "what is your age?";
 in variable2;
 out "You entered ", variable1, " and ", variable2; 
 '''
-#Function is decf ABC and write the code below and do endf. This will end that function
+
 Interpreter().main(Code)
