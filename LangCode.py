@@ -5,7 +5,7 @@ class Keyword:
         self.__OneVariableCommand:list = ["in", "empt"]
         self.__TwoOrMoreVariableCommand:list = ["out","inc","dec","decl","set", "add",
                                                 "minus","div", "mult"]
-        self.__Datatypes:list = ["varchar","int","bool"]
+        self.__Datatypes:list = ["varchar","int","float"]
 
     def GetKeywords(self) -> list:return self.__Keywords
     def GetOneVariableCommand(self) -> list: return self.__OneVariableCommand
@@ -103,9 +103,9 @@ class Interpreter():
                 if outputval != "NONESTORENULLVAL":print(str(outputval).strip('"'), end="")
                 else: return -1,f"Undeclared variable, {outtoken[iter1]}"
             elif outtoken[iter1][0] == '"' and outtoken[iter1][-1]!= '"' or (outtoken[iter1][0] != '"' and outtoken[iter1] == '"'):
-                return -1, "Incorrect representation of string"
+                return False, "Incorrect representation of string"
         print()
-        return 1,"" 
+        return True,"" 
 
     def inp(self,inpvariable,storedata): #inp because it is a keyword in python... but this is for the in function 
         for iter1 in range(len(self.__memory)): 
@@ -326,7 +326,7 @@ class Interpreter():
 
                 if tokenizedline[0] == "out":
                     returnval, returnstate = self.out(tokenizedline[1:]) #Put variable name and data
-                    if returnval == -1 and returnstate:Error().OutError(returnstate, iter1) #If malformed line for out Keyword
+                    if not returnval:Error().OutError(returnstate, iter1) #If malformed line for out Keyword
 
                 elif tokenizedline[0] == "in":
                     sudostore = input("")
@@ -370,7 +370,7 @@ class Interpreter():
 Code = '''
 decl variable1 int; 
 decl variable2 int;
-decl variable3 int;
+decl variable3 float;
 in variable1; 
 in variable2;
 add variable1,variable2,variable3;
