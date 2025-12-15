@@ -1,8 +1,8 @@
 class Keyword: 
     def __init__(self) -> None:
-        self.__Keywords:list = ["out","in","inc","dec", "decv","varchar","int","bool"
-                                ,"set","empt", "add", "minus","mult", "div", "decf", "endf"]
-        self.__OneVariableCommand:list = ["in", "empt", 'decf', "endf"]
+        self.__Keywords:list = ["out","in","inc","dec", "decl","varchar","int","bool"
+                                ,"set","empt", "add", "minus","mult"]
+        self.__OneVariableCommand:list = ["in", "empt"]
         self.__TwoOrMoreVariableCommand:list = ["out","inc","dec","decl","set", "add",
                                                 "minus","div", "mult"]
         self.__Datatypes:list = ["varchar","int","bool"]
@@ -14,10 +14,9 @@ class Keyword:
 
 class Error: 
     def OutError(self, ErrorType, ErrorLine) -> None:
-        print()
         print(f"ERROR[{ErrorLine}] : {ErrorType}")
         exit()
-    
+
 class Tokenizer:
     def Tokenize(self,line,linenumber) -> list:
         token,Storetokens = "", []
@@ -63,6 +62,7 @@ class Tokenizer:
                 if token != "":
                     Storetokens.append(token)
                     token = ""
+
                 count += 1 
                 continue
             if ch == ";":
@@ -76,9 +76,7 @@ class Tokenizer:
         return Storetokens
 
 class Interpreter():
-    def __init__(self) -> None: 
-        self.__memory = [] # memory[0] is to store functions and the tokens inside that function
-        self.__storefunctions = []
+    def __init__(self) -> None: self.__memory = []
 
     def storevariables(self,val) -> None:
         try:self.__memory.append(val)
@@ -93,7 +91,7 @@ class Interpreter():
 
     def out(self,outtoken):
         for iter1 in range(len(outtoken)):
-            outputval = "NULLVALNONESTORE", #assigned the specific code such that the input does not mess up the processing
+            outputval = ""
             if outtoken[iter1].isdigit():print(outtoken[iter1])
             elif outtoken[iter1][0] == '"' and outtoken[iter1][-1] == '"':print(outtoken[iter1].strip('"'),end="")
             elif outtoken[iter1][0] != '"' and outtoken[iter1][-1] != '"':
@@ -102,11 +100,8 @@ class Interpreter():
                         if each[0] == "float":outputval = float(each[2].strip())
                         elif each[0] == "int":outputval = int(float(each[2].strip()))
                         elif each[0] == "varchar":outputval = str(each[2])
-
-                if outputval != "NULLVALNONESTORE":print(str(outputval).strip('"'), end="")
-                else:
-                    print(outputval)
-                    return -1,f"Undeclared variable, '{outtoken[iter1]}'"
+                if outputval:print(str(outputval).strip('"'), end="")
+                else: return -1,f"Undeclared variable, {outtoken[iter1]}"
             elif outtoken[iter1][0] == '"' and outtoken[iter1][-1]!= '"' or (outtoken[iter1][0] != '"' and outtoken[iter1] == '"'):
                 return -1, "Incorrect representation of string"
         print()
@@ -157,7 +152,7 @@ class Interpreter():
                 if not state1: return False, "Variable not found"
             else: return False, "Cannot increment non-variable tokens"
         return True, ""
- 
+
     def dec(self,tokens):
         for iter1 in range(len(tokens)):
             state1 = False
@@ -211,6 +206,7 @@ class Interpreter():
             return returnstate, returnval
         elif not dataofstoringvariable: 
             return False, f"Variable not found, '{tokens[-1]}'"
+            
 
     def minus(self, tokens):
         storeall = []
@@ -242,37 +238,38 @@ class Interpreter():
         elif dataofstoringvariable and (dataofstoringvariable[0] != 'float' and dataofstoringvariable[0] != 'int'):
             return False, f"Invalid datatype for storing variable, '{tokens[-1]}'"
 
-    def mult(self, tokens):
+
+    def minus(self, tokens):
         storeall = []
         for iter1 in range(len(tokens)-1):
             datatypeoftoken = self.determinedatatype(tokens[iter1])
             if not datatypeoftoken:
                 variable = self.searchvariables(tokens[iter1])
                 try:
-                    if (variable and (variable[0] == "int" or variable[0] == "float")):storeall.append(float(variable[2]))
+                    if (variable and (variable[0] == "int" or variable[0] == "float")):
+                        storeall.append(float(variable[2]))
                     elif not variable:return False, f"Variable not declared for '{tokens[iter1]}'"
                     elif variable[0] != "int" and variable[0] != "float":
                         return False, f"Only int/float variables can be subtracted"
-                except:return False, f"Multiplying variables must have value in them. No int/float data stored in '{tokens[iter1]}'"
+                except:
+                    return False, f"Subtracting variables must have value in them. No int/float data stored in '{tokens[iter1]}'"
 
             elif datatypeoftoken == "int" or datatypeoftoken == "float":storeall.append(float(tokens[iter1]))
             elif datatypeoftoken != "int" and datatypeoftoken != "float":return False, "Only int/float tokens can be subtracted. Neither found."
 
         dataofstoringvariable = self.searchvariables(tokens[-1])
-        multiplyingvalue = 1
-        for iter1 in range(len(storeall)): multiplyingvalue *= float(storeall[iter1])
-
+        dividingvalue = float(storeall[0])
+        for iter1 in range(1,len(storeall)): dividingvalue /= float(storeall[iter1]) 
         if dataofstoringvariable and (dataofstoringvariable[0] == "float" or dataofstoringvariable[0] == "int"):
-            returnstate, returnval = self.set(tokens[-1],str(multiplyingvalue))
+            returnstate, returnval = self.set(tokens[-1],str(subtractedvalue))
             return returnstate, returnval
 
         elif not dataofstoringvariable: 
             return False, f"Variable not found, '{tokens[-1]}'"
-
         elif dataofstoringvariable and (dataofstoringvariable[0] != 'float' and dataofstoringvariable[0] != 'int'):
             return False, f"Invalid datatype for storing variable, '{tokens[-1]}'"
 
-    def div(self, tokens):
+    def mult(self, tokens):
         storeall = []
         for iter1 in range(len(tokens)-1):
             datatypeoftoken = self.determinedatatype(tokens[iter1])
@@ -291,13 +288,11 @@ class Interpreter():
             elif datatypeoftoken != "int" and datatypeoftoken != "float":return False, "Only int/float tokens can be subtracted. Neither found."
 
         dataofstoringvariable = self.searchvariables(tokens[-1])
-        dividingvalue = float(storeall[0])
-        for iter1 in range(1,len(storeall)):
-            if storeall[iter1] == 0: return False, "Cannot divide by zero"
-            dividingvalue /= float(storeall[iter1])
+        multiplyingvalue = 1
+        for iter1 in range(len(storeall)): multiplyingvalue *= float(storeall[iter1])
 
         if dataofstoringvariable and (dataofstoringvariable[0] == "float" or dataofstoringvariable[0] == "int"):
-            returnstate, returnval = self.set(tokens[-1],str(dividingvalue))
+            returnstate, returnval = self.set(tokens[-1],str(multiplyingvalue))
             return returnstate, returnval
 
         elif not dataofstoringvariable: 
@@ -306,97 +301,75 @@ class Interpreter():
         elif dataofstoringvariable and (dataofstoringvariable[0] != 'float' and dataofstoringvariable[0] != 'int'):
             return False, f"Invalid datatype for storing variable, '{tokens[-1]}'"
 
-    def Interpret(self, tokenizedline, iter1) -> None:
-
-        if tokenizedline[0] == "empt":self.empt()
-
-        elif tokenizedline[0] not in Keyword().GetKeywords():Error().OutError("Every line must begin with a command/funciton, none found", iter1)
-
-        elif tokenizedline[0] in Keyword().GetOneVariableCommand() and (len(tokenizedline) > 2  or len(tokenizedline) < 2):
-            Error().OutError("Length of line does not support one variable command", iter1)
-
-        elif tokenizedline[0] in Keyword().GetTwoOrMoreVariableCommand() and len(tokenizedline)<2:
-            Error().OutError("Length of line does not support two or more tokens command", iter1)
-
-        if tokenizedline[0] == "out":
-            returnval, returnstate = self.out(tokenizedline[1:]) #Put variable name and data
-            if returnval == -1 and returnstate:Error().OutError(returnstate, iter1) #If malformed line for out Keyword
-        
-        elif tokenizedline[0] == "in":
-            sudostore = input("")
-            returnval, returnstate = self.inp(tokenizedline[1],sudostore)
-            if not returnval:
-                Error().OutError(returnstate,iter1)
-
-        elif tokenizedline[0] == "inc": #Increments float or int datatype variables by 1 
-            returnval,returnstate = self.inc(tokenizedline[1:])
-            if not returnval: Error().OutError(returnstate,iter1)
-
-        elif tokenizedline[0] == "dec":
-            returnval,returnstate = self.dec(tokenizedline[1:])
-            if not returnval: Error().OutError(returnstate, iter1)
-    
-        elif tokenizedline[0] == "decv":
-            returnval, returnstate = self.decl(tokenizedline[1:])
-            if not returnval: Error().OutError(returnstate, iter1)
-
-        elif tokenizedline[0] == "set": 
-            if len(tokenizedcode)>3: Error.OutError("Malformed line for 'set'", iter1)
-            returnval, returnstate = self.set(tokenizedline[1],tokenizedline[2])
-            if not returnval: Error().OutError(returnstate, iter1)
-
-        elif tokenizedline[0] == "add":
-            returnval, returnstate = self.add(tokenizedline[1:])
-            if not returnval: Error().OutError(returnstate, iter1)
-
-        elif tokenizedline[0] == "minus":
-            returnval, returnstate = self.minus(tokenizedline[1:])
-            if not returnval: Error().OutError(returnstate, iter1)
-
-        elif tokenizedline[0] == "mult":
-            returnval, returnstate = self.mult(tokenizedline[1:])
-            if not returnval: Error().OutError(returnstate, iter1)
-
-        elif tokenizedline[0] == "div":
-            returnval, returnstate = self.div(tokenizedline[1:])
-            if not returnval: Error().OutError(returnstate, iter1)
-
-        elif tokenizedline[0] == "decf": pass 
-
-
-    def main(self, code):
-        funcitonpointer,infunction = -1, False
+    def Interpret(self, code) -> None:
         lines,tokenizedcode = code.split("\n"),[]
         for iter1 in range(len(lines)):
             tokenizedline = Tokenizer().Tokenize(lines[iter1],iter1)
-            tokenizedline = [each for each in tokenizedline if each != "" and each != ";"]
-            if tokenizedline: 
-                if tokenizedline[0] == "endf" and infunction: 
 
-                if tokenizedline[0] == "decf" and not infunction:
-                    try: 
-                        self.__storefunctions.append([tokenizedline[1]])
-                        infunction,functionpointer = True, functionpointer + 1 
-                    except:Error().OutError("Malformed line for function declaration", iter1)
-
-                elif tokenizedline[0] == "decf" and infunction: 
-                    try: 
-                        self__storefunctions[functionpointer].append([tokenizedline[1]])
-
-        for iter1 in range(len(lines)):
-            tokenizedline = Tokenizer().Tokenize(lines[iter1],iter1)
             if tokenizedline: 
                 if tokenizedline[-1] != ";":Error().OutError("Malformed line. Each line must end with ';'", iter1)
-                tokenizedline = [each for each in tokenizedline if each != "" and each != ";"]
-                self.Interpret(tokenizedline, iter1)
-Code = '''
-decv variable1 varchar;
-decv variable2 varchar; 
-out "What is your name?";
-in variable1; 
-out "what is your age?";
-in variable2;
-out "You entered ", variable1, " and ", variable2; 
-'''
 
-Interpreter().main(Code)
+                tokenizedline = [each for each in tokenizedline if each != "" and each != ";"]
+
+                if tokenizedline[0] == "empt":self.empt()
+
+                elif tokenizedline[0] not in Keyword().GetKeywords():Error().OutError("Every line must begin with a command/funciton, none found", iter1)
+
+                elif tokenizedline[0] in Keyword().GetOneVariableCommand() and (len(tokenizedline) > 2  or len(tokenizedline) < 2):
+                    Error().OutError("Length of line does not support one variable command", iter1)
+
+                elif tokenizedline[0] in Keyword().GetTwoOrMoreVariableCommand() and len(tokenizedline)<2:
+                    Error().OutError("Length of line does not support two or more tokens command", iter1)
+
+                if tokenizedline[0] == "out":
+                    returnval, returnstate = self.out(tokenizedline[1:]) #Put variable name and data
+                    if returnval == -1 and returnstate:Error().OutError(returnstate, iter1) #If malformed line for out Keyword
+
+                elif tokenizedline[0] == "in":
+                    sudostore = input("")
+                    returnval, returnstate = self.inp(tokenizedline[1],sudostore)
+                    if not returnval:
+                        Error().OutError(returnstate,iter1)
+
+                elif tokenizedline[0] == "inc": #Increments float or int datatype variables by 1 
+                    returnval,returnstate = self.inc(tokenizedline[1:])
+                    if not returnval: Error().OutError(returnstate,iter1)
+
+                elif tokenizedline[0] == "dec":
+                    returnval,returnstate = self.dec(tokenizedline[1:])
+                    if not returnval: Error().OutError(returnstate, iter1)
+
+                elif tokenizedline[0] == "decl":
+                    returnval, returnstate = self.decl(tokenizedline[1:])
+                    if not returnval: Error().OutError(returnstate, iter1)
+
+                elif tokenizedline[0] == "set": 
+                    if len(tokenizedcode)>3: Error.OutError("Malformed line for 'set'", iter1)
+                    returnval, returnstate = self.set(tokenizedline[1],tokenizedline[2])
+                    if not returnval: Error().OutError(returnstate, iter1)
+
+                elif tokenizedline[0] == "add":
+                    returnval, returnstate = self.add(tokenizedline[1:])
+                    if not returnval: Error().OutError(returnstate, iter1)
+
+                elif tokenizedline[0] == "minus":
+                    returnval, returnstate = self.minus(tokenizedline[1:])
+                    if not returnval: Error().OutError(returnstate, iter1)
+                elif tokenizedline[0] == "mult":
+                    returnval, returnstate = self.mult(tokenizedline[1:])
+                    if not returnval: Error().OutError(returnstate, iter1)
+
+Code = '''
+decl variable1 int; 
+decl variable2 int;
+decl variable3 int;
+set variable1 200; 
+set variable2 300;
+add variable1,variable2,variable3;
+out variable3;
+minus variable1, variable2, variable3;
+out variable3;
+mult variable1, variable2, variable3; 
+out variable3; 
+''' 
+Interpreter().Interpret(Code)
