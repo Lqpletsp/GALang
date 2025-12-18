@@ -54,6 +54,7 @@ class Tokenizer:
                 incomments = False
                 count += 1 
                 continue
+
             if incomments:
                 count += 1 
                 continue
@@ -62,9 +63,9 @@ class Tokenizer:
                 if token != "":
                     Storetokens.append(token)
                     token = ""
-
                 count += 1 
                 continue
+
             if ch == ";":
                 if Storetokens != "":Storetokens.append(token)
                 Storetokens.append(";")
@@ -73,10 +74,19 @@ class Tokenizer:
             else: 
                 token += ch 
                 count += 1
+
         return Storetokens
 
-class Interpreter():
-    def __init__(self) -> None: self.__memory = []
+class Interpreter:
+    def __init__(self,CODE) -> None: 
+        self.__memory = []
+        self.__fncstack = []
+        self.__fncstackreference = []
+        self.__currentfunction = "CD!2)990sfdccd!" # A code such that the funciton name does not collide with the value
+        self.__tempstorememory = []
+        self.__tempstorefncstack = []
+        self.__infunction = False
+        self.__code = CODE
 
     def storevariables(self,val) -> None:
         try:self.__memory.append(val)
@@ -84,12 +94,12 @@ class Interpreter():
             print("Memory full, write unsucessful")
             exit()
 
-    def searchvariables(self, VariableName):
+    def searchvariables(self, VariableName) -> list:
         for each in self.__memory: 
             if each[1] == VariableName: return each
         return []
 
-    def out(self,outtoken):
+    def out(self,outtoken) -> tuple[bool,str]:
         for iter1 in range(len(outtoken)):
             outputval = "NONESTORENULLVAL"
             if outtoken[iter1].isdigit():print(outtoken[iter1])
@@ -107,7 +117,7 @@ class Interpreter():
         print()
         return True,"" 
 
-    def inp(self,inpvariable,storedata): #inp because it is a keyword in python... but this is for the in function 
+    def inp(self,inpvariable,storedata) -> tuple[bool,str]: #inp because it is a keyword in python... but this is for the in function 
         for iter1 in range(len(self.__memory)): 
             if self.__memory[iter1][1] == inpvariable:
                 try:self.__memory[iter1][2] = storedata
@@ -115,7 +125,7 @@ class Interpreter():
                 return True, ""
         return False, "Varaible not found"
 
-    def set(self,inpvariable,storedata): 
+    def set(self,inpvariable,storedata) -> tuple[bool,str]: 
         for iter1 in range(len(self.__memory)):
             if (self.__memory[iter1][1] == inpvariable and ((self.determinedatatype(storedata) == self.__memory[iter1][0] or 
                                                             (self.determinedatatype(storedata) == "int" or self.determinedatatype(storedata) == "float")) or
@@ -135,9 +145,9 @@ class Interpreter():
 
         return False, "Varaible not found"
 
-    def empt(self):print("\033[2J\033[H")
+    def empt(self) -> None:print("\033[2J\033[H")
 
-    def inc(self,tokens):
+    def inc(self,tokens) -> tuple[bool,str]:
         for iter1 in range(len(tokens)): 
             state2 = False
             if not self.determinedatatype(tokens[iter1]):
@@ -153,7 +163,7 @@ class Interpreter():
             else: return False, "Cannot increment non-variable tokens"
         return True, ""
 
-    def dec(self,tokens):
+    def dec(self,tokens) -> tuple[bool,str]:
         for iter1 in range(len(tokens)):
             state1 = False
             if not self.determinedatatype(tokens[iter1]):
@@ -169,7 +179,7 @@ class Interpreter():
             else:return False, "Cannot decrement non-variable tokens"
         return True, ""
 
-    def decl(self,tokens):
+    def decv(self,tokens) -> tuple[bool,str]:
         if not tokens[0].isdigit() and tokens[1].strip('"') in Keyword().GetDataTypes():
             self.storevariables([tokens[1],tokens[0]])
             return True, "" 
@@ -182,7 +192,7 @@ class Interpreter():
         elif value.isdigit() and int(value) != float(value): return "float"
         else: return ""
 
-    def add(self, tokens):
+    def add(self, tokens) -> tuple[bool,str]:
         storeall = []
         for iter1 in range(len(tokens)-1):
             datatypeoftoken = self.determinedatatype(tokens[iter1])
@@ -208,7 +218,7 @@ class Interpreter():
             return False, f"Variable not found, '{tokens[-1]}'"
             
 
-    def minus(self, tokens):
+    def minus(self, tokens) -> tuple[bool,str]:
         storeall = []
         for iter1 in range(len(tokens)-1):
             datatypeoftoken = self.determinedatatype(tokens[iter1])
@@ -228,18 +238,18 @@ class Interpreter():
 
         dataofstoringvariable = self.searchvariables(tokens[-1])
         subtractedvalue = float(storeall[0])
+
         for iter1 in range(1,len(storeall)): subtractedvalue -= float(storeall[iter1]) 
         if dataofstoringvariable and (dataofstoringvariable[0] == "float" or dataofstoringvariable[0] == "int"):
             returnstate, returnval = self.set(tokens[-1],str(subtractedvalue))
             return returnstate, returnval
 
-        elif not dataofstoringvariable: 
-            return False, f"Variable not found, '{tokens[-1]}'"
+        elif not dataofstoringvariable: return False, f"Variable not found, '{tokens[-1]}'"
         elif dataofstoringvariable and (dataofstoringvariable[0] != 'float' and dataofstoringvariable[0] != 'int'):
             return False, f"Invalid datatype for storing variable, '{tokens[-1]}'"
 
 
-    def div(self, tokens):
+    def div(self, tokens) -> tuple[bool,str]:
         storeall = []
         for iter1 in range(len(tokens)-1):
             datatypeoftoken = self.determinedatatype(tokens[iter1])
@@ -272,7 +282,7 @@ class Interpreter():
         elif dataofstoringvariable and (dataofstoringvariable[0] != 'float' and dataofstoringvariable[0] != 'int'):
             return False, f"Invalid datatype for storing variable, '{tokens[-1]}'"
 
-    def mult(self, tokens):
+    def mult(self, tokens) -> tuple[bool,str]:
         storeall = []
         for iter1 in range(len(tokens)-1):
             datatypeoftoken = self.determinedatatype(tokens[iter1])
@@ -304,12 +314,37 @@ class Interpreter():
         elif dataofstoringvariable and (dataofstoringvariable[0] != 'float' and dataofstoringvariable[0] != 'int'):
             return False, f"Invalid datatype for storing variable, '{tokens[-1]}'"
 
-    def Interpret(self, code) -> None:
-        lines,tokenizedcode = code.split("\n"),[]
-        for iter1 in range(len(lines)):
-            tokenizedline = Tokenizer().Tokenize(lines[iter1],iter1)
+    def call(fncname):
+        fncfound = False
+        for iter1 in range(len(self.__fncstack)):
+            if self.__fncstack[iter1][1] == fncname and self.__fncstack[0] == self.__currentfunction:
+                self.__tempstorefncstack = self.__fncstack if not self.__tempstorefncstack else self.__tempstorefncstack.append(self.__fncstack)
+                self.__tempstorememory = self.__memory if not self.__tempstorememory else self.__tempstorememory.append(self.__memory)
+                self.Interpret(fncpointer+1)
+                fncfound = True 
 
-            if tokenizedline: 
+            elif self.__fncstack[iter1][1] == fncname and self.__fncstack[0] != self.__currentfunction: 
+               return False, f"Cannot access local function 'self.__fncstack[iter1][1]'"
+        if not fncfound: return False, f"Function not found, 'fncname'"
+                #What this part does is stores everything else in another storing variable and only allows this part of the code to run
+
+    def Interpret(self,pointer) -> None:
+        for iter1 in range(pointer,len(self.__code)):
+            tokenizedline = self.__code[iter1]
+
+            if tokenizedline and tokenizedline[0] == "endf" and not self.__infunction:
+                if not self.__fncstackreference: Error().OutError("No function declared to end." iter1)
+                self.__fncstackreference.pop()
+                self.__currentfunction = self.__fncstackreference[-1]
+                if not self.__fncstackreference: self.__currentfunction = "CD!2)990sfdccd!"
+
+            elif tokenizedline and tokenizedline[0] == "endf" and self.__infunction: 
+                self.__fncstack = self.__tempstorefncstack[-1]
+                self.__tempstorefncstack.pop()
+                self.__memory = self.__tempstorememory[-1]
+                self.__tempstorememory.pop() 
+
+            elif tokenizedline and self.__currentfunction == "CD!2)990sfdccd!": 
                 if tokenizedline[-1] != ";":Error().OutError("Malformed line. Each line must end with ';'", iter1)
 
                 tokenizedline = [each for each in tokenizedline if each != "" and each != ";"]
@@ -328,6 +363,16 @@ class Interpreter():
                     returnval, returnstate = self.out(tokenizedline[1:]) #Put variable name and data
                     if not returnval:Error().OutError(returnstate, iter1) #If malformed line for out Keyword
 
+                elif tokenizedline[0] == "decf":
+                    try: 
+                        self.__fncstack.append([self.__currentfunction, tokenizedline[1], iter1]) # Existing function, New function name, and function pointer
+                        self.__fncstackreference.append(tokenizedline[1])
+                    except:Error().OutError("Malformed line for function declaration. Must name the function.", iter1)
+
+                elif tokenizedline[0] == "call":
+                    returnval, returnstate = self.call(tokenizedline[1])
+                    if not returnval: Error().OutError(returnstate, iter1)
+
                 elif tokenizedline[0] == "in":
                     sudostore = input("")
                     returnval, returnstate = self.inp(tokenizedline[1],sudostore)
@@ -342,7 +387,7 @@ class Interpreter():
                     returnval,returnstate = self.dec(tokenizedline[1:])
                     if not returnval: Error().OutError(returnstate, iter1)
 
-                elif tokenizedline[0] == "decl":
+                elif tokenizedline[0] == "decv":
                     returnval, returnstate = self.decl(tokenizedline[1:])
                     if not returnval: Error().OutError(returnstate, iter1)
 
@@ -368,18 +413,13 @@ class Interpreter():
                     if not returnval: Error.OutError(returnstate, iter1)
 
 Code = '''
-decl variable1 int; 
-decl variable2 int;
-decl variable3 float;
-in variable1; 
-in variable2;
-add variable1,variable2,variable3;
-out variable3;
-minus variable1, variable2, variable3;
-out variable3;
-mult variable1, variable2, variable3;
-out variable3; 
-div variable1, variable2, variable3;
-out variable3; 
+decv variable1 int; 
+set variable1 12.12; 
+out variable1;
 ''' 
-Interpreter().Interpret(Code)
+lines = code.split('\n')
+code = []
+for each in lines:
+    tokenizedline = Tokenizer().Tokenize(each,iter1)
+    code.append(tokenizedline)
+Interpreter(code).Interpret(0)
