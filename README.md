@@ -6,5 +6,5 @@
 - int
 - float
 
-#### Memory -> list with variable storage in the format, ```[<datatype>,<variable name>,<data stored>]```
+#### Memory (Though it is named 'memory', it actually just stores variable) -> list with variable storage in the format, ```[<datatype>,<variable name>,<data stored>]```
 
