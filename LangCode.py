@@ -1,8 +1,9 @@
 class Keyword: 
     def __init__(self) -> None:
-        self.__Keywords:list = ["out","in","inc","dec", "decl","varchar","int","bool"
-                                ,"set","empt", "add", "minus","mult", "div"]
-        self.__OneVariableCommand:list = ["in", "empt"]
+        self.__Keywords:list = ["out","in","inc","dec", "decv","varchar","int","bool"
+                                ,"set","empt", "add", "minus","mult", "div","decf", "endf",
+                                "call"]
+        self.__OneVariableCommand:list = ["in", "empt","decf"]
         self.__TwoOrMoreVariableCommand:list = ["out","inc","dec","decl","set", "add",
                                                 "minus","div", "mult"]
         self.__Datatypes:list = ["varchar","int","float"]
@@ -18,7 +19,7 @@ class Error:
         exit()
 
 class Tokenizer:
-    def Tokenize(self,line,linenumber) -> list:
+    def Tokenize(self,line) -> list:
         token,Storetokens = "", []
         line = line.rstrip()
         if not line: return None
@@ -82,10 +83,11 @@ class Interpreter:
         self.__memory = []
         self.__fncstack = []
         self.__fncstackreference = []
+        self.__topfunction = "CD!2)990sfdccd!"
         self.__currentfunction = "CD!2)990sfdccd!" # A code such that the funciton name does not collide with the value
         self.__tempstorememory = []
         self.__tempstorefncstack = []
-        self.__infunction = False
+        self.__infunction,self.__functioncall = False,False
         self.__code = CODE
 
     def storevariables(self,val) -> None:
@@ -314,37 +316,43 @@ class Interpreter:
         elif dataofstoringvariable and (dataofstoringvariable[0] != 'float' and dataofstoringvariable[0] != 'int'):
             return False, f"Invalid datatype for storing variable, '{tokens[-1]}'"
 
-    def call(fncname):
+    def call(self, fncname):
         fncfound = False
         for iter1 in range(len(self.__fncstack)):
-            if self.__fncstack[iter1][1] == fncname and self.__fncstack[0] == self.__currentfunction:
+            if self.__fncstack[iter1][1] == fncname and self.__fncstack[iter1][0] == self.__topfunction:
                 self.__tempstorefncstack = self.__fncstack if not self.__tempstorefncstack else self.__tempstorefncstack.append(self.__fncstack)
                 self.__tempstorememory = self.__memory if not self.__tempstorememory else self.__tempstorememory.append(self.__memory)
-                self.Interpret(fncpointer+1)
-                fncfound = True 
-
-            elif self.__fncstack[iter1][1] == fncname and self.__fncstack[0] != self.__currentfunction: 
-               return False, f"Cannot access local function 'self.__fncstack[iter1][1]'"
-        if not fncfound: return False, f"Function not found, 'fncname'"
-                #What this part does is stores everything else in another storing variable and only allows this part of the code to run
+                self.Interpret(self.__fncstack[iter1][2]+1)
+                fncfound,self.__functioncall,self.__infunction = True,True,True
+                return True, ""
+            elif self.__fncstack[iter1][1] == fncname and self.__fncstack[0] != self.__topfunction:
+                return False, f"Cannot access local function '{self.__fncstack[iter1][1]}'"
+        if not fncfound: return False, f"Function not found, '{fncname}'"
 
     def Interpret(self,pointer) -> None:
         for iter1 in range(pointer,len(self.__code)):
             tokenizedline = self.__code[iter1]
+            print(tokenizedline)
 
             if tokenizedline and tokenizedline[0] == "endf" and not self.__infunction:
-                if not self.__fncstackreference: Error().OutError("No function declared to end." iter1)
+                print(self.__fncstackreference)
+                if not self.__fncstackreference: Error().OutError("No function declared to end.", iter1)
                 self.__fncstackreference.pop()
-                self.__currentfunction = self.__fncstackreference[-1]
                 if not self.__fncstackreference: self.__currentfunction = "CD!2)990sfdccd!"
+                else:self.__currentfunction = self.__fncstackreference[-1]
+                try: self.__topfunction = self.__fncstackreference[-2]
+                except: self.__topfunction = "CD!2)990sfdccd!"
 
-            elif tokenizedline and tokenizedline[0] == "endf" and self.__infunction: 
-                self.__fncstack = self.__tempstorefncstack[-1]
+            elif tokenizedline and tokenizedline[0] == "endf" and self.__infunction:
                 self.__tempstorefncstack.pop()
+                if self.__tempstorefncstack:self.__fncstack = self.__tempstorefncstack[-1]
+                else: self.__fncstack = []
+                try: self.__topfunction = self.__fncstackreference[-2]
+                except: self.__topfunction = "CD!2)990sfdccd!"
                 self.__memory = self.__tempstorememory[-1]
                 self.__tempstorememory.pop() 
 
-            elif tokenizedline and self.__currentfunction == "CD!2)990sfdccd!": 
+            elif tokenizedline and (self.__currentfunction == "CD!2)990sfdccd!" or self.__functioncall): 
                 if tokenizedline[-1] != ";":Error().OutError("Malformed line. Each line must end with ';'", iter1)
 
                 tokenizedline = [each for each in tokenizedline if each != "" and each != ";"]
@@ -366,7 +374,10 @@ class Interpreter:
                 elif tokenizedline[0] == "decf":
                     try: 
                         self.__fncstack.append([self.__currentfunction, tokenizedline[1], iter1]) # Existing function, New function name, and function pointer
+                        try: self.__topfunction = self.__fncstackreference[-2]
+                        except: self.__topfunction = "CD!2)990sfdccd!"
                         self.__fncstackreference.append(tokenizedline[1])
+
                     except:Error().OutError("Malformed line for function declaration. Must name the function.", iter1)
 
                 elif tokenizedline[0] == "call":
@@ -388,11 +399,11 @@ class Interpreter:
                     if not returnval: Error().OutError(returnstate, iter1)
 
                 elif tokenizedline[0] == "decv":
-                    returnval, returnstate = self.decl(tokenizedline[1:])
+                    returnval, returnstate = self.decv(tokenizedline[1:])
                     if not returnval: Error().OutError(returnstate, iter1)
 
                 elif tokenizedline[0] == "set": 
-                    if len(tokenizedcode)>3: Error.OutError("Malformed line for 'set'", iter1)
+                    if len(tokenizedline)>3: Error.OutError("Malformed line for 'set'", iter1)
                     returnval, returnstate = self.set(tokenizedline[1],tokenizedline[2])
                     if not returnval: Error().OutError(returnstate, iter1)
 
@@ -413,13 +424,13 @@ class Interpreter:
                     if not returnval: Error.OutError(returnstate, iter1)
 
 Code = '''
-decv variable1 int; 
-set variable1 12.12; 
-out variable1;
+decf hello; 
+endf;
+call hello; 
 ''' 
-lines = code.split('\n')
+lines = Code.split('\n')
 code = []
 for each in lines:
-    tokenizedline = Tokenizer().Tokenize(each,iter1)
+    tokenizedline = Tokenizer().Tokenize(each)
     code.append(tokenizedline)
 Interpreter(code).Interpret(0)
