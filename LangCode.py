@@ -2,10 +2,10 @@ class Keyword:
     def __init__(self) -> None:
         self.__Keywords:list = ["out","in","inc","dec", "decv","varchar","int","bool"
                                 ,"set","empt", "add", "minus","mult", "div","decf", "endf",
-                                "call"]
+                                "call", "parm", "rtr"]
         self.__OneVariableCommand:list = ["in", "empt","decf"]
         self.__TwoOrMoreVariableCommand:list = ["out","inc","dec","decl","set", "add",
-                                                "minus","div", "mult"]
+                                                "minus","div", "mult", "parm"]
         self.__Datatypes:list = ["varchar","int","float"]
 
     def GetKeywords(self) -> list:return self.__Keywords
@@ -89,6 +89,7 @@ class Interpreter:
         self.__tempstorefncstack = []
         self.__infunction,self.__functioncall = False,False
         self.__code = CODE
+        self.__parameter = []
 
     def storevariables(self,val) -> None:
         try:self.__memory.append(val)
@@ -316,10 +317,14 @@ class Interpreter:
         elif dataofstoringvariable and (dataofstoringvariable[0] != 'float' and dataofstoringvariable[0] != 'int'):
             return False, f"Invalid datatype for storing variable, '{tokens[-1]}'"
 
-    def call(self, fncname):
+    def call(self, fncdeclaration):
+        for iter1 in range(1,len(fncdeclaration)):
+            variabledata = self.searchvariables(fncdeclaration[iter1])
+            if not variabledata: return False, f"Variable not found, '{fncdeclaration[iter1]}'"
+            if variabledata not in self.__memory: self.__memory.append(variabledata)
         fncfound = False
         for iter1 in range(len(self.__fncstack)):
-            if self.__fncstack[iter1][1] == fncname:
+            if self.__fncstack[iter1][1] == fncdeclaration[0]:
                 self.__functioncall = True
                 self.__infunction = True
                 self.Interpret(self.__fncstack[iter1][2]+1)
@@ -330,7 +335,16 @@ class Interpreter:
         if not fncfound:
             return False, f"function not found, '{fncname}'"
 
+    def parm(self,paramters):
+        found = False
+        if len(self.__memory) == len(paramters):
+            for iter1 in range(len(paramters)):self.__memory[iter1][1] = paramters[iter1]
+            return True, ""
+        elif len(self.__memory) != len(paramters):       return False, "Invalid number of parameters given in function call."
+
     def Interpret(self,pointer) -> None:
+        try: self.__code[pointer]
+        except:Error().OutError("Function declaration error. No lines/commands found.",iter1) #Function declaration because when calling the object, it just calls with 0 index but only with funciton declaration, it may show an error. 
         for iter1 in range(pointer,len(self.__code)):
             tokenizedline = self.__code[iter1]
             if not tokenizedline: continue
@@ -362,13 +376,18 @@ class Interpreter:
                 if not returnval: Error().OutError(returnstate, iter1)
 
             elif tokenizedline[0] == "call":
-                returnval, returnstate = self.call(tokenizedline[1])
+                returnval, returnstate = self.call(tokenizedline[1:])
                 if not returnval: Error().OutError(returnstate, iter1)
+
+            # !!!!!!!!!!!MISSING ERROR HANDELING!!!!!!!!!!! 
             elif tokenizedline[0] == "in":
                 sudostore = input("")
                 returnval, returnstate = self.inp(tokenizedline[1],sudostore)
-                if not returnval:
-                    Error().OutError(returnstate,iter1)
+                if not returnval:Error().OutError(returnstate,iter1)
+
+            elif self.__functioncall and tokenizedline[0] == "parm": 
+                returnval, returnstate = self.parm(tokenizedline[1:])
+                if not returnval: Error().OutError(returnstate, iter1)
 
             elif tokenizedline[0] == "inc": #Increments float or int datatype variables by 1 
                 returnval,returnstate = self.inc(tokenizedline[1:])
@@ -403,11 +422,18 @@ class Interpreter:
                 returnval,returnstate = self.div(tokenizedline[1:])
                 if not returnval: Error.OutError(returnstate, iter1)
 
-Code = '''
-decf hello;
-out 12;
-endf; 
-call hello; 
+Code = ''' 
+decv variable1 varchar; 
+decv variable2 varchar; 
+decv variable3 varchar; 
+set variable1 "Hello "; 
+set variable2 "This is ";
+set variable3 "a test :)";
+decf hello; 
+parm a,b,c; 
+out a,b,c; 
+endf;
+call hello variable1,variable2,variable3; 
 ''' 
 lines = Code.split('\n')
 code = []
@@ -415,3 +441,23 @@ for each in lines:
     tokenizedline = Tokenizer().Tokenize(each)
     code.append(tokenizedline)
 Interpreter(code).Interpret(0)
+
+
+"""
+GOAL: ABLE TO RETURN VALUE FROM A FUNCTION
+____SPECIMEN____
+decv a int; 
+decv b int; 
+decv e int; 
+set a 12;
+set b 13; 
+decf test; 
+parm d,c;
+decv f int; 
+add d,c,f; 
+rtr f; 
+endf; 
+set e call test; 
+out e;
+"""
+
