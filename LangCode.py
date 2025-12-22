@@ -444,7 +444,7 @@ Interpreter(code).Interpret(0)
 
 
 """
-GOAL: ABLE TO RETURN VALUE FROM A FUNCTION
+EXAMPLE OF WHAT THE CODE CANNOT INTERPRET
 ____SPECIMEN____
 decv a int; 
 decv b int; 
