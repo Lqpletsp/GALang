@@ -2,16 +2,19 @@ class Keyword:
     def __init__(self) -> None:
         self.__Keywords:list = ["out","in","inc","dec", "decv","varchar","int","bool"
                                 ,"set","empt", "add", "minus","mult", "div","decf", "endf",
-                                "call", "parm", "rtr"]
-        self.__OneVariableCommand:list = ["in", "empt","decf"]
-        self.__TwoOrMoreVariableCommand:list = ["out","inc","dec","decl","set", "add",
+                                "call", "parm", "rtr", "temp"]
+        self.__OneVariableCommand:list = ["in", "empt","decf","decv"]
+        self.__TwoOrMoreVariableCommand:list = ["out","inc","dec","decv","set", "add",
                                                 "minus","div", "mult", "parm"]
         self.__Datatypes:list = ["varchar","int","float"]
+        self.__Commands:list = ["out","in","dec","decv","set","empt","add","minus","mult","div","decf",
+                                "endf","parm","rtr","in","inc","call"]
 
     def GetKeywords(self) -> list:return self.__Keywords
     def GetOneVariableCommand(self) -> list: return self.__OneVariableCommand
     def GetTwoOrMoreVariableCommand(self) -> list: return self.__TwoOrMoreVariableCommand
     def GetDataTypes(self) -> list: return self.__Datatypes
+    def GetCommands(self)-> list: return self.__Commands
 
 class Error: 
     def OutError(self, ErrorType, ErrorLine) -> None:
@@ -90,9 +93,17 @@ class Interpreter:
         self.__infunction,self.__functioncall = False,False
         self.__code = CODE
         self.__parameter = []
+        self.__temp = []
 
     def storevariables(self,val) -> None:
-        try:self.__memory.append(val)
+        stored = False
+        try:
+            for iter1 in range(len(self.__memory)):
+                if self.__memory[iter1][1] == val[1]:
+                    self.__memory[iter1][2] = val[2]
+                    stored = True
+                break
+            if not stored:self.__memory.append(val)
         except MemoryError:
             print("Memory full, write unsucessful")
             exit()
@@ -128,25 +139,48 @@ class Interpreter:
                 return True, ""
         return False, "Varaible not found"
 
-    def set(self,inpvariable,storedata) -> tuple[bool,str]: 
-        for iter1 in range(len(self.__memory)):
-            if (self.__memory[iter1][1] == inpvariable and ((self.determinedatatype(storedata) == self.__memory[iter1][0] or 
-                                                            (self.determinedatatype(storedata) == "int" or self.determinedatatype(storedata) == "float")) or
-                                                            (self.__memory[iter1][0] == "float" or self.__memory[iter1][0] == "int"))):
-                try:self.__memory[iter1][2] = storedata
-                except: self.__memory[iter1].append(storedata)
-                return True, ""
+    def set(self,inpvariables,storedata) -> tuple[bool,str]: 
+        if storedata != "temp":
+            for iter1 in range(len(inpvariables)):
+                variablefound = False 
+                inpvariable = inpvariables[iter1]
+                for iter2 in range(len(self.__memory)):
+                    if (self.__memory[iter2][1] == inpvariable and ((self.determinedatatype(storedata) == self.__memory[iter2][0] or 
+                                                                    (self.determinedatatype(storedata) == "int" or self.determinedatatype(storedata) == "float")) or
+                                                                    (self.__memory[iter2][0] == "float" or self.__memory[iter2][0] == "int"))):
+                        try:self.__memory[iter2][2] = storedata
+                        except: self.__memory[iter2].append(storedata)
+                        variablefound = True
+                        continue
 
-            elif self.__memory[iter1][1] == inpvariable and not self.determinedatatype(storedata):
-                variablestore = self.searchvariables(storedata)
-                if not variablestore: return False, "Variable not found"
-                elif variablestore[0] == self.__memory[iter1][0]: 
-                    try:self.__memory[iter1][2] = variablestore[2]
-                    except:self.__memory[iter1].append(variablestore[2])
-                    return True, ""
-                elif variablestore[0] != self.__memory[iter1][0]: return False, "Incorrect datatype. Cannot store in the said variable"
+                    elif self.__memory[iter2][1] == inpvariable and not self.determinedatatype(storedata):
+                        variablestore = self.searchvariables(storedata)
+                        if not variablestore: return False, "Variable not found"
+                        elif variablestore[0] == self.__memory[iter2][0]: 
+                            try:self.__memory[iter2][2] = variablestore[2]
+                            except:self.__memory[iter2].append(variablestore[2])
+                            variablefound = True
+                            continue
+                        elif variablestore[0] != self.__memory[iter2][0]: return False, "Incorrect datatype. Cannot store in the said variable"
+                if not variablefound: return False, f"Variable not found, {inpvariables[iter2]}" 
+            return True, ""
 
-        return False, "Varaible not found"
+        elif storedata == "temp":
+            if len(inpvariables) != len(self.__temp):return False, "Cannot store return values. Storing returned value and returning value does not match"
+            for iter1 in range(len(inpvariables)):
+                inpvariable = inpvariables[iter1]
+                variabledata = self.searchvariables(inpvariable)
+                storingdatatype = self.determinedatatype(self.__temp[iter1][2])
+                if not variabledata:
+                    print(inpvariable)
+                    print(self.__memory)
+                    print(self.__fncstack)
+                    print(self.__tempstorememory) # IT SEEMS THAT PARM OVERWROTE IN THE MAIN
+                    return False, f"Cannot store returned value in a non-existing variable, '{inpvariable}'"
+                if not storingdatatype: return False, f"CRITICAL ERROR. CANNOT FIND DATA"
+                if variabledata[0] != storingdatatype: return False, f"Conflicting data-types. Cannot store in '{inpvariable}'"
+                self.storevariables([storingdatatype,variabledata,temp[iter1]])
+            return True, ""
 
     def empt(self) -> None:print("\033[2J\033[H")
 
@@ -184,7 +218,7 @@ class Interpreter:
 
     def decv(self,tokens) -> tuple[bool,str]:
         if not tokens[0].isdigit() and tokens[1].strip('"') in Keyword().GetDataTypes():
-            self.storevariables([tokens[1],tokens[0]])
+            self.storevariables([tokens[1],tokens[0],None])
             return True, "" 
         elif tokens[0].isdigit(): return False, "Invalid variable name"
         elif tokens[1] not in Keyword().GetDataTypes(): return False, "Invalid Datatype"
@@ -332,15 +366,24 @@ class Interpreter:
                 self.__infunction = False
                 fncfound = True
                 return True, ""
-        if not fncfound:
-            return False, f"function not found, '{fncname}'"
+        if not fncfound:return False, f"module not found, '{fncname}'"
 
     def parm(self,paramters):
         found = False
         if len(self.__memory) == len(paramters):
             for iter1 in range(len(paramters)):self.__memory[iter1][1] = paramters[iter1]
             return True, ""
-        elif len(self.__memory) != len(paramters):       return False, "Invalid number of parameters given in function call."
+        elif len(self.__memory) != len(paramters):return False, "Invalid number of parameters given in function call."
+
+    def rtr(self,returnvals):
+        for iter1 in range(len(returnvals)):
+            variabledatatype = self.determinedatatype(returnvals[iter1])
+            if not variabledatatype: 
+                variabledata = self.searchvariables(returnvals[iter1])
+                if not variabledata:return False, f"Variable not found, '{returnvals[iter1]}'"
+                self.__temp.append(variabledata)
+            else: self.__temp.append([variabledatatype,None,returnvals[iter1]])
+        return True, ""
 
     def Interpret(self,pointer) -> None:
         try: self.__code[pointer]
@@ -371,6 +414,13 @@ class Interpreter:
 
             tokenizedline = [each for each in tokenizedline if each != "" and each != ";"]
 
+            if tokenizedline[0] not in Keyword().GetCommands():
+                Error().OutError(f"Malformed line. Each line must begin with a command, none found. No command '{tokenizedline[0]}' exists. ",iter1) 
+
+            elif self.__infunction and self.__functioncall and tokenizedline[0] == "rtr":
+                returnval,returnstate = self.rtr(tokenizedline[1:])
+                if not returnval: Error().OutError(returnstate,iter1)
+
             if tokenizedline[0] == "out":
                 returnval, returnstate = self.out(tokenizedline[1:])
                 if not returnval: Error().OutError(returnstate, iter1)
@@ -379,7 +429,6 @@ class Interpreter:
                 returnval, returnstate = self.call(tokenizedline[1:])
                 if not returnval: Error().OutError(returnstate, iter1)
 
-            # !!!!!!!!!!!MISSING ERROR HANDELING!!!!!!!!!!! 
             elif tokenizedline[0] == "in":
                 sudostore = input("")
                 returnval, returnstate = self.inp(tokenizedline[1],sudostore)
@@ -402,8 +451,8 @@ class Interpreter:
                 if not returnval: Error().OutError(returnstate, iter1)
 
             elif tokenizedline[0] == "set": 
-                if len(tokenizedline)>3: Error.OutError("Malformed line for 'set'", iter1)
-                returnval, returnstate = self.set(tokenizedline[1],tokenizedline[2])
+                if len(tokenizedline)<3: Error.OutError("Malformed line for 'set'", iter1)
+                returnval, returnstate = self.set(tokenizedline[1:len(tokenizedline)-1],tokenizedline[-1])
                 if not returnval: Error().OutError(returnstate, iter1)
 
             elif tokenizedline[0] == "add":
@@ -423,17 +472,21 @@ class Interpreter:
                 if not returnval: Error.OutError(returnstate, iter1)
 
 Code = ''' 
+|THIS IS  COMMENT :)|
 decv variable1 varchar; 
 decv variable2 varchar; 
 decv variable3 varchar; 
-set variable1 "Hello "; 
-set variable2 "This is ";
-set variable3 "a test :)";
+set variable1 "Hello, "; 
+set variable2 "this is ";
+set variable3 "a test";
 decf hello; 
 parm a,b,c; 
 out a,b,c; 
+rtr a,b,c;
 endf;
-call hello variable1,variable2,variable3; 
+call hello variable1,variable2,variable3;
+set variable1,variable2,variable3 temp;
+out variable1,variable2,variable3;
 ''' 
 lines = Code.split('\n')
 code = []
@@ -441,23 +494,3 @@ for each in lines:
     tokenizedline = Tokenizer().Tokenize(each)
     code.append(tokenizedline)
 Interpreter(code).Interpret(0)
-
-
-"""
-EXAMPLE OF WHAT THE CODE CANNOT INTERPRET
-____SPECIMEN____
-decv a int; 
-decv b int; 
-decv e int; 
-set a 12;
-set b 13; 
-decf test; 
-parm d,c;
-decv f int; 
-add d,c,f; 
-rtr f; 
-endf; 
-set e call test; 
-out e;
-"""
-
