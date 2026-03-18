@@ -1,6 +1,8 @@
 # Disassembly
 
-**A high-level interpreter that uses command-execution line format with simulated memory.**
+**A high-level interpreter that uses command-execution line format with simulated memory.The language is very rigid as each command is harcoded in a way that it does not support other commands inside it.**
+
+**Disasm2 is being developed in cpp that deals with the problems mentioned and will also have a better variable declaration and data retrieval than O(n) that is currently.**
 
 ## Installation for linux/mac
 
